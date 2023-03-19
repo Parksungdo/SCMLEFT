@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+	<!-- 반품 신청 목록 조회 -->
+
+<mapper namespace="kr.happyjob.study.scm.dao.RefundInfoDao">
+		<!-- 반품 신청 목록 조회 -->
+	<select id="refundInfoList" resultType="kr.happyjob.study.scm.model.RefundInfoVO">
+		SELECT	(CASE
+					WHEN JI.JORD_CODE IS NOT NULL
+					THEN '기업'
+					WHEN BI.BORD_CODE IS NOT NULL
+					THEN '발주'
+				END) AS 'TYPE',
+				RI.RE_CODE,
+				(CASE
+					WHEN JI.JORD_CODE IS NOT NULL
+					THEN JUI.company 
+					WHEN BI.BORD_CODE IS NOT NULL
+					THEN PUI.company
+				END) AS 'NAME',
+				RI.MODEL_CODE,
+				PD.PD_NAME AS 'MODEL_NAME',
+				RI.RE_DATE,
+				DI.DIR_DATE,
+				RI.RE_AMT,
+				(PD.PD_PRICE * RI.RE_AMT) AS 'RE_PRICE',
+				WI.WH_NAME,
+				RI.RE_TYPE 
+		FROM	RETURN_INFO RI LEFT OUTER JOIN DIRECTION DI ON RI.DIR_CODE = DI.DIR_CODE 
+							   LEFT JOIN SHIP_INFO SI ON RI.RE_CODE = SI.RE_CODE 
+							   LEFT JOIN JORDER_INFO JI ON SI.JORD_CODE = JI.JORD_CODE
+							   LEFT JOIN BORDER_INFO BI ON RI.BORD_CODE = BI.BORD_CODE 
+							   INNER JOIN PD_INFO PD ON RI.MODEL_CODE = PD.MODEL_CODE 
+							   INNER JOIN WHOUSE_INFO WI ON RI.WH_CODE = WI.WH_CODE 	  
+							   LEFT JOIN tb_userinfo PUI ON PD.loginID = PUI.loginID
+							   LEFT JOIN tb_userinfo JUI ON JI.loginID = JUI.loginID    
+		   <where>
+				<if test = "(pdname != null) and (!pdname.equals(''))">
+					AND PD.PD_NAME LIKE CONCAT('%',#{pdname},'%')
+				</if>
+				<if test = "(sdate != null) and (!sdate.equals(''))">
+					AND <![CDATA[RI.RE_DATE >= #{sdate}]]>
+				</if>
+				<if test = "(edate != null) and (!edate.equals(''))">
+					AND <![CDATA[RI.RE_DATE <= #{edate}]]>
+				</if>				
+			</where>
+			 LIMIT #{pageIndex},#{pageSize}
+	</select>	
+	
+	<select id="countRefundInfoList" resultType="int">
+		SELECT COUNT(*)
+		FROM	RETURN_INFO RI LEFT OUTER JOIN DIRECTION DI ON RI.DIR_CODE = DI.DIR_CODE 
+							   LEFT JOIN SHIP_INFO SI ON RI.RE_CODE = SI.RE_CODE 
+							   LEFT JOIN JORDER_INFO JI ON SI.JORD_CODE = JI.JORD_CODE
+							   LEFT JOIN BORDER_INFO BI ON RI.BORD_CODE = BI.BORD_CODE 
+							   INNER JOIN PD_INFO PD ON RI.MODEL_CODE = PD.MODEL_CODE 
+							   INNER JOIN WHOUSE_INFO WI ON RI.WH_CODE = WI.WH_CODE 	  
+							   LEFT JOIN tb_userinfo PUI ON PD.loginID = PUI.loginID
+							   LEFT JOIN tb_userinfo JUI ON JI.loginID = JUI.loginID    
+		   <where>
+				<if test = "(pdname != null) and (!pdname.equals(''))">
+					AND PD.PD_NAME LIKE CONCAT('%',#{pdname},'%')
+				</if>
+				<if test = "(sdate != null) and (!sdate.equals(''))">
+					AND <![CDATA[RI.RE_DATE >= #{sdate}]]>
+				</if>
+				<if test = "(edate != null) and (!edate.equals(''))">
+					AND <![CDATA[RI.RE_DATE <= #{edate}]]>
+				</if>				
+			</where>  
+	</select>	
+	
+	<!-- 반품 신청 모달  -->
+	<select id = "refundDtModalList"  parameterType="Map" resultType = "kr.happyjob.study.scm.model.RefundInfoVO">	
+		SELECT 	RI.RE_CODE,
+				PD.PD_NAME AS 'MODEL_NAME',
+				RI.RE_DATE,
+				RI.RE_AMT,
+				(PD.PD_PRICE * RI.RE_AMT) AS 'RE_PRICE',
+				RI.WH_CODE as origin_ware_no,
+				WI.WH_NAME,
+				RI.RE_TYPE
+		FROM	RETURN_INFO RI LEFT OUTER JOIN DIRECTION DI ON RI.DIR_CODE = DI.DIR_CODE 
+							   LEFT JOIN SHIP_INFO SI ON RI.RE_CODE = SI.RE_CODE 
+							   LEFT JOIN JORDER_INFO JI ON SI.JORD_CODE = JI.JORD_CODE
+							   LEFT JOIN BORDER_INFO BI ON RI.BORD_CODE = BI.BORD_CODE 
+							   INNER JOIN PD_INFO PD ON RI.MODEL_CODE = PD.MODEL_CODE 
+							   INNER JOIN WHOUSE_INFO WI ON RI.WH_CODE = WI.WH_CODE 	  
+							   LEFT JOIN tb_userinfo PUI ON PD.loginID = PUI.loginID
+							   LEFT JOIN tb_userinfo JUI ON JI.loginID = JUI.loginID
+		WHERE	RI.RE_CODE = #{re_code}
+	</select>
+	
+	<!-- 창고  -->
+	<select id = "selectWareInfo" resultType = "kr.happyjob.study.scm.model.WarehouseVO">
+					         				
+	
+  	 select 
+			         wh.WH_CODE
+			        , wh.WH_NAME
+		
+   
+			FROM  WHOUSE_INFO wh
+      group by wh.WH_CODE;
+    			 
+	</select>
+	
+	<!--  승인 요청 -->
+	
+	<update id="updateRefund" parameterType="java.util.Map" >
+        UPDATE RETURN_INFO 
+        set dir_code = (SELECT DI.DIR_CODE
+        				FROM ( SELECT MAX(DIR_CODE) as DIR_CODE 
+							     FROM DIRECTION 
+							     WHERE DIR_DATE = DATE_FORMAT(now(), '%Y%m%d') AND DIR_AMT = #{RE_AMT})DI),
+			RE_TYPE = '0'
+		where re_code = #{re_code}          
+    </update>
+	
+
+	<!-- <update id="updateDirRefund"  parameterType="map" >	
+		 UPDATE RETURN_INFO  set 
+        	dir_code = #{dir_code}
+		where re_code = #{re_code} 
+         
+		
+    </update> -->
+    
+    <!-- 지시서코드 생성 -->
+    <insert id="insertDir"   parameterType="java.util.Map">	    
+        insert into DIRECTION 
+       		 (		
+       		 DIR_CODE	  
+			  ,DIR_TYPE
+			  ,DIR_DATE
+			  ,DIR_AMT
+			  ,loginID		  
+				)			
+			values
+			(
+			 (SELECT DI.DIR_CODE
+			  FROM(SELECT IFNULL(MAX(DIR_CODE),0) + 1 as DIR_CODE FROM DIRECTION) DI)  
+		    ,'1'
+			, DATE_FORMAT(now(), '%Y%m%d')
+			, #{RE_AMT}
+			, #{loginId}
+			  )
+	</insert>
+	
+</mapper>

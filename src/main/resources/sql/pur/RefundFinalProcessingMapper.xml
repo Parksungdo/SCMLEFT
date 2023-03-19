@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.happyjob.study.pur.dao.RefundFinalProcessingDao">
+
+	<!-- 반품 + 검색 -->
+	 <select id="refundList" resultType="kr.happyjob.study.pur.model.RefundFinalProcessingModel">
+						     
+			select ri.RE_CODE
+			       , pn.loginID
+			       , pn.MODEL_NAME
+			       , ri.RE_AMT
+			       , ri.RE_DATE
+			       , ri.RE_TYPE
+			       , pn.PD_PRICE
+			       , ri.RE_OUT
+			from RETURN_INFO ri
+				inner join PD_INFO pn on ri.RE_CODE = pn.MODEL_CODE
+			
+		<where>		
+				and ri.RE_TYPE = '1'
+			 <!--  <if test="(checkBoxStatus != null) and (checkBoxStatus.equals('checked'))">
+			  	and ri.RE_TYPE = '1'
+			  </if>	 -->		  
+		  	<if test="(searchKey != null) and (!searchKey.equals(''))">
+		  		<choose>
+		  		    <when test="(searchKey != null) and (searchKey eq 'cpname'.toString())">
+		  				AND pn.loginID LIKE CONCAT('%', #{searchWord}, '%')	
+		  				<if test="(!sdate.equals('')) or (!edate.equals(''))">
+		  					<![CDATA[
+		  						AND ri.RE_DATE >= DATE(#{sdate}) 
+		  						AND ri.RE_DATE < DATE(#{edate})+1
+		  					]]>						  					
+		  				</if>	  				
+		  			</when>
+		  			 <when test="(searchKey != null) and (searchKey eq 'pdname'.toString())">
+		  				AND pn.MODEL_NAME LIKE CONCAT('%', #{searchWord}, '%')	
+		  				<if test="(!sdate.equals('')) or (!edate.equals(''))">
+		  					<![CDATA[
+		  						AND ri.RE_DATE >= DATE(#{sdate}) 
+		  						AND ri.RE_DATE < DATE(#{edate})+1
+		  					]]>						  					
+		  				</if>	  				
+		  			</when>
+		  					  			 
+		  		</choose>
+		  	</if>
+		  </where>  
+		  order by ri.RE_CODE DESC
+		  LIMIT #{pageIndex}, #{pageSize}
+		  
+	</select>
+
+	<!-- 전체리스트 -->
+	<select id="refundTotalCnt" resultType="int">
+						     
+			select count(*)
+			from RETURN_INFO ri
+				inner join PD_INFO pn
+					on ri.RE_CODE = pn.MODEL_CODE
+			<where>		
+			and ri.RE_TYPE = '1'
+	<!-- 		   <if test="(checkBoxStatus != null) and (checkBoxStatus.equals('checked'))">
+			  	and ri.RE_TYPE = '1'
+			  </if> -->
+			  
+		  	<if test="(searchKey != null) and (!searchKey.equals(''))">
+		  		<choose>
+		  		
+		  		    <when test="(searchKey != null) and (searchKey eq 'cpname'.toString())">
+		  				AND pn.loginID LIKE CONCAT('%', #{searchWord}, '%')	
+		  				<if test="(!sdate.equals('')) or (!edate.equals(''))">
+		  					<![CDATA[
+		  						AND ri.RE_DATE >= DATE(#{sdate}) 
+		  						AND ri.RE_DATE < DATE(#{edate})+1
+		  					]]>						  					
+		  				</if>	  				
+		  			</when>
+		  			 <when test="(searchKey != null) and (searchKey eq 'pdname'.toString())">
+		  				AND pn.MODEL_NAME LIKE CONCAT('%', #{searchWord}, '%')	
+		  				<if test="(!sdate.equals('')) or (!edate.equals(''))">
+		  					<![CDATA[
+		  						AND ri.RE_DATE >= DATE(#{sdate}) 
+		  						AND ri.RE_DATE < DATE(#{edate})+1
+		  					]]>						  					
+		  				</if>	  				
+		  			</when>
+		  					  			 
+		  		</choose>
+		  	</if>
+		  </where>  
+	</select>
+
+	<!-- 상세보기 -->
+	<select id="refundDetail" resultType="kr.happyjob.study.pur.model.RefundFinalProcessingModel">
+						     
+			select ri.RE_CODE
+			       , pn.loginID 
+			       , pn.MODEL_NAME
+			       , ri.RE_AMT
+			       , ri.RE_DATE
+			       , ri.RE_TYPE
+			       , pn.PD_PRICE
+			from RETURN_INFO ri
+				inner join PD_INFO pn on ri.RE_CODE = pn.MODEL_CODE
+	
+			where ri.RE_CODE = #{recode}
+		
+ 	</select>
+
+	<update id="refundUpdate">
+		
+		update RETURN_INFO
+			set RE_OUT = '1'
+			where RE_CODE = #{recode}
+	</update>
+	
+</mapper>
